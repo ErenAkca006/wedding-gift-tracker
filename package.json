@@ -1,0 +1,20 @@
+{
+  "name": "wedding-gift-tracker",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tailwindcss -i ./src/input.css -o ./public/css/style.css --watch",
+    "build": "tailwindcss -i ./src/input.css -o ./public/css/style.css --minify",
+    "start": "live-server public",
+    "firebase": "firebase emulators:start"
+  },
+  "dependencies": {
+    "firebase": "^10.9.2",
+    "live-server": "^1.2.2"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17",
+    "postcss": "^8.4.31",
+    "autoprefixer": "^10.4.16"
+  }
+}
