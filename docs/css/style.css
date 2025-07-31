@@ -194,7 +194,25 @@ hr {
 /*
 Add the correct text decoration in Chrome, Edge, and Safari.
 */
+/* Özel tablo kaydırma stilleri */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+}
 
+.overflow-x-auto table {
+  min-width: 640px; /* Mobilde kaydırmanın başlaması için minimum genişlik */
+}
+
+@media (min-width: 768px) {
+  .overflow-x-auto table {
+    min-width: 100%; /* Büyük ekranlarda normal davranış */
+  }
+}
+
+.whitespace-nowrap {
+  white-space: nowrap;
+}
 abbr:where([title]) {
   -webkit-text-decoration: underline dotted;
           text-decoration: underline dotted;
