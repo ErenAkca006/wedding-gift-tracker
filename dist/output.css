@@ -758,8 +758,8 @@ video {
   border-color: rgb(209 213 219 / var(--tw-divide-opacity, 1));
 }
 
-.overflow-hidden {
-  overflow: hidden;
+.overflow-x-auto {
+  overflow-x: auto;
 }
 
 .whitespace-nowrap {
