@@ -265,9 +265,28 @@ function searchGifts() {
   const searchTerm = elements.searchInput.value.toLowerCase();
   const rows = elements.giftsContainer.querySelectorAll('tr');
 
+  // Türkçe karakterleri dikkate alarak küçük harfe çevirme fonksiyonu
+  function toTurkishLowerCase(text) {
+  const turkishMap = {
+    'I': 'ı',
+    'İ': 'i',
+    'Ş': 'ş',
+    'Ğ': 'ğ',
+    'Ü': 'ü',
+    'Ö': 'ö',
+    'Ç': 'ç'
+  };
+  return text.replace(/[IİŞĞÜÖÇ]/g, function(match) {
+    return turkishMap[match];
+  }).toLowerCase();
+}
+
   rows.forEach(row => {
-    const name = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-    row.style.display = name.includes(searchTerm) ? '' : 'none';
+    const name = row.querySelector('td:nth-child(2)').textContent;
+    const normalizedName = toTurkishLowerCase(name);
+    const normalizedSearchTerm = toTurkishLowerCase(searchTerm);
+    
+    row.style.display = normalizedName.includes(normalizedSearchTerm) ? '' : 'none';
   });
 }
 
