@@ -1,20 +1,24 @@
-import { db, auth } from './firebase.js';
-import { login, signup } from './auth.js';
+// app.js en üst kısım
+import {
+  db,
+  auth,
+  collection,
+  addDoc,
+  onSnapshot,
+  doc,
+  deleteDoc,
+  updateDoc,
+  getDoc,
+  query,
+  orderBy
+} from './firebase.js';
 
 import {
   signOut,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-import {
-  collection,
-  orderBy,
-  addDoc,
-  onSnapshot,
-  doc,
-  deleteDoc,
-  query
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { login, signup } from './auth.js';
 
 // --- DOM Elements vs. (aynı kalıyor) ---
 const elements = {
@@ -40,6 +44,8 @@ const elements = {
 function initApp() {
   setupEventListeners();
   checkAuthState();
+  document.getElementById('save-edit-btn').addEventListener('click', saveEditedGift);
+  document.getElementById('cancel-edit-btn').addEventListener('click', closeEditModal);
 }
 
 document.addEventListener('DOMContentLoaded', initApp);
@@ -121,10 +127,23 @@ async function addNewGift() {
   let name = elements.giftForm.name.value.trim();
   let detail = elements.giftForm.detail.value.trim();
   const giftSelect = document.getElementById('gift-select');
+  const selectedGiftType = giftSelect.value;
   const manualInputContainer = document.getElementById('gift-detail-container');
 
-  if (!name || !detail) {
-    showToast('Lütfen ad soyad ve takı detayını giriniz!', 'warning');
+  if (!name) {
+    showToast('Lütfen ad soyad giriniz!', 'warning');
+    return;
+  }
+
+  // Bilezik seçildiyse ve detay girilmediyse uyarı ver
+  if (selectedGiftType === 'BİLEZİK' && !detail) {
+    showToast('Lütfen bilezik detayını giriniz!', 'warning');
+    return;
+  }
+
+  // Diğer seçildiyse ve detay girilmediyse uyarı ver
+  if (selectedGiftType === 'DİĞER' && !detail) {
+    showToast('Lütfen takı detayını giriniz!', 'warning');
     return;
   }
 
@@ -137,6 +156,16 @@ async function addNewGift() {
   // Büyük harfe çevir
   name = turkishToUpper(name);
   detail = turkishToUpper(detail);
+
+  // Bilezik seçildiyse sonuna "bilezik" ekle (eğer zaten yoksa)
+  if (selectedGiftType === 'BİLEZİK' && !detail.toUpperCase().endsWith('BİLEZİK')) {
+    detail += ' BİLEZİK';
+  }
+
+  // Eğer "Diğer" seçilmediyse ve "Bilezik" seçilmediyse, select'teki değeri kullan
+  if (selectedGiftType !== 'DİĞER' && selectedGiftType !== 'BİLEZİK') {
+    detail = selectedGiftType;
+  }
 
   try {
     const user = auth.currentUser;
@@ -164,8 +193,7 @@ async function addNewGift() {
   }
 }
 
-
-function loadGifts(userId) { 
+function loadGifts(userId) {
   const q = query(
     collection(db, 'users', userId, 'takilar'),
     orderBy('createdAt', 'desc')  // <-- en son ekleneni en üste getirir
@@ -329,11 +357,124 @@ async function exportToPDF() {
 
 
 
-function openEditModal(giftId) {
-  showToast('Düzenleme özelliği aktif değil', 'warning');
-  // Düzenleme modalı buraya gelecek
-}
+// // Global değişkenler
+// let currentEditingGiftId = null;
 
+// // Modal fonksiyonları
+// async function openEditModal(giftId) {
+//   console.log("Düzenleme başlatılıyor, ID:", giftId); // Debug için
+//   currentEditingGiftId = giftId;
+//   const modal = document.getElementById('edit-modal');
+
+//   try {
+//     const user = auth.currentUser;
+//     if (!user) {
+//       showToast('Kullanıcı girişi gerekli', 'error');
+//       return;
+//     }
+
+//     const giftRef = doc(db, 'users', user.uid, 'takilar', giftId);
+//     const docSnap = await getDoc(giftRef);
+
+//     if (docSnap.exists()) {
+//       const data = docSnap.data();
+//       document.getElementById('edit-name').value = data.name;
+//       document.getElementById('edit-gift').value = data.gift;
+
+//       modal.classList.remove('hidden');
+//       console.log("Modal başarıyla gösterildi"); // Debug için
+//     } else {
+//       console.error("Belge bulunamadı");
+//       showToast('Düzenlenecek takı bulunamadı', 'error');
+//     }
+//   } catch (error) {
+//     console.error("Düzenleme hatası:", error);
+//     showToast('Takı bilgisi alınırken hata oluştu', 'error');
+//   }
+// }
+
+// function closeEditModal() {
+//   document.getElementById('edit-modal').classList.add('hidden');
+//   currentEditingGiftId = null;
+// }
+// document.getElementById('save-edit-btn').addEventListener('click', async () => {
+//   const name = document.getElementById('edit-name').value.trim();
+//   const gift = document.getElementById('edit-gift').value.trim();
+
+//   if (!name || !gift) {
+//     showToast('Lütfen tüm alanları doldurun', 'warning');
+//     return;
+//   }
+
+//   try {
+//     const user = auth.currentUser;
+//     if (!user) {
+//       showToast('Kullanıcı girişi gerekli', 'error');
+//       return;
+//     }
+
+//     const giftRef = doc(db, 'users', user.uid, 'takilar', currentEditingGiftId);
+
+//     // Türkçeye özel büyük harf fonksiyonu
+//     function turkishToUpper(text) {
+//       const letters = { 'i': 'İ', 'ı': 'I' };
+//       return text.replace(/([iı])/g, letter => letters[letter] || letter).toUpperCase();
+//     }
+
+//     await updateDoc(giftRef, {
+//       name: turkishToUpper(name),
+//       gift: turkishToUpper(gift),
+//       updatedAt: new Date()
+//     });
+
+//     showToast('Takı bilgisi güncellendi', 'success');
+//     closeEditModal();
+//   } catch (error) {
+//     showToast('Güncelleme sırasında hata oluştu', 'error');
+//     console.error("Error updating document:", error);
+//   }
+// });
+
+// // İptal butonu işlevi
+// document.getElementById('cancel-edit-btn').addEventListener('click', closeEditModal);
+
+// async function saveEditedGift() {
+//   const name = document.getElementById('edit-name').value.trim();
+//   const gift = document.getElementById('edit-gift').value.trim();
+
+//   if (!name || !gift) {
+//     showToast('Lütfen tüm alanları doldurun', 'warning');
+//     return;
+//   }
+
+//   try {
+//     const user = auth.currentUser;
+//     if (!user) {
+//       showToast('Kullanıcı girişi gerekli', 'error');
+//       return;
+//     }
+
+//     const giftRef = doc(db, 'users', user.uid, 'takilar', currentEditingGiftId);
+
+//     // Türkçeye özel büyük harf fonksiyonu
+//     function turkishToUpper(text) {
+//       const letters = { 'i': 'İ', 'ı': 'I' };
+//       return text.replace(/([iı])/g, letter => letters[letter] || letter).toUpperCase();
+//     }
+
+//     await updateDoc(giftRef, {
+//       name: turkishToUpper(name),
+//       gift: turkishToUpper(gift),
+//       updatedAt: new Date()
+//     });
+
+//     showToast('Takı bilgisi güncellendi', 'success');
+//     closeEditModal();
+//   } catch (error) {
+//     console.error("Güncelleme hatası:", error);
+//     showToast('Güncelleme sırasında hata oluştu', 'error');
+//   }
+// }
 // Uygulamayı Başlat
 document.addEventListener('DOMContentLoaded', initApp);
 
@@ -341,13 +482,21 @@ document.addEventListener('DOMContentLoaded', initApp);
 document.getElementById('gift-select').addEventListener('change', (e) => {
   const manualContainer = document.getElementById('gift-detail-container');
   const manualInput = document.getElementById('gift-detail');
+  const selectedValue = e.target.value;
 
-  if (e.target.value === 'DİĞER') {
+  if (selectedValue === 'DİĞER' || selectedValue === 'BİLEZİK') {
     manualContainer.classList.remove('hidden');
     manualInput.value = '';
     manualInput.focus();
+
+    // Bilezik seçildiyse placeholder'ı değiştir
+    if (selectedValue === 'BİLEZİK') {
+      manualInput.placeholder = "Örn: Düz Tel 22 Ayar Altın Bilezik 10 gr";
+    } else {
+      manualInput.placeholder = "Örn: 1000 Dolar";
+    }
   } else {
-    manualInput.value = e.target.value;
+    manualInput.value = selectedValue;
     manualContainer.classList.add('hidden');
   }
 });
