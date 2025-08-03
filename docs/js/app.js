@@ -196,38 +196,47 @@ async function addNewGift() {
 function loadGifts(userId) {
   const q = query(
     collection(db, 'users', userId, 'takilar'),
-    orderBy('createdAt', 'desc')  // <-- en son ekleneni en üste getirir
+    orderBy('name')  // Alfabetik sıralama için 'name' alanına göre sırala
   );
-
 
   onSnapshot(q, (snapshot) => {
     elements.giftsContainer.innerHTML = '';
 
-    let counter = 1;
-
+    // Önce tüm verileri bir array'e alalım
+    const gifts = [];
     snapshot.forEach((doc) => {
-      const gift = doc.data();
+      gifts.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    // Alfabetik sıralama yapalım (Türkçe karakterleri dikkate alarak)
+    gifts.sort((a, b) => {
+      return a.name.localeCompare(b.name, 'tr');
+    });
+
+    // Sıralanmış verileri ekrana yazdıralım
+    gifts.forEach((gift, index) => {  // index parametresini ekledik
       const row = document.createElement('tr');
       row.className = 'gift-item hover:bg-gray-50';
       row.innerHTML = `
-    <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500">${counter}</td>
-    <td class="whitespace-nowrap py-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">${gift.name}</td>
-    <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">${gift.gift}</td> 
-    <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-      <div class="flex gap-2 justify-end">
-        <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${doc.id}">
-          <i class="fas fa-edit"></i>
-        </button>
-        <button class="delete-btn text-red-600 hover:text-red-900" data-id="${doc.id}">
-          <i class="fas fa-trash"></i>
-        </button>
-      </div>
-    </td>
-  `;
+        <td class="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500">${index + 1}</td> <!-- Sıra numarası -->
+        <td class="whitespace-nowrap py-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">${gift.name}</td>
+        <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">${gift.gift}</td> 
+        <td class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+          <div class="flex gap-2 justify-end">
+            <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${gift.id}">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="delete-btn text-red-600 hover:text-red-900" data-id="${gift.id}">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </td>
+      `;
       elements.giftsContainer.appendChild(row);
-      counter++;
     });
-
 
     // Silme butonlarına event ekle
     document.querySelectorAll('.delete-btn').forEach(btn => {
@@ -251,7 +260,6 @@ function loadGifts(userId) {
     });
   });
 }
-
 // Utility Functions
 function searchGifts() {
   const searchTerm = elements.searchInput.value.toLowerCase();
@@ -312,21 +320,29 @@ async function exportToPDF() {
   doc.text(`Tarih: ${currentDate}`, 14, 27);
 
   // Satırları oluştur
+// Verileri alfabetik sıraya göre hazırla
   const rows = [];
-  let counter = 1;
-
-  elements.giftsContainer.querySelectorAll('tr').forEach(row => {
-    const cells = row.querySelectorAll('td');
-    if (cells.length >= 3) { // Numara + İsim + Takı
-      rows.push([
-        counter.toString(),              // Numara
-        cells[1].textContent.trim(),    // Ad Soyad
-        cells[2].textContent.trim()     // Takı Detayı
-      ]);
-      counter++;
-    }
+  const giftItems = Array.from(elements.giftsContainer.querySelectorAll('tr'));
+  
+  // Alfabetik sıralama yap
+  giftItems.sort((a, b) => {
+    const nameA = a.querySelector('td:nth-child(2)').textContent.trim();
+    const nameB = b.querySelector('td:nth-child(2)').textContent.trim();
+    return nameA.localeCompare(nameB, 'tr');
   });
 
+  // Sıralanmış verileri PDF için hazırla (baş harfleri göster)
+  giftItems.forEach((row) => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length >= 3) {
+      const name = cells[1].textContent.trim();
+      rows.push([
+        name.charAt(0).toUpperCase(), // İsim baş harfi (büyük harf)
+        name,                        // Ad Soyad
+        cells[2].textContent.trim()  // Takı Detayı
+      ]);
+    }
+  });
   if (rows.length === 0) {
     showToast('PDF için listede veri yok!', 'warning');
     return;
